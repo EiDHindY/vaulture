@@ -78,7 +78,7 @@ def db_path() -> Path:
     # Development/runtime from source: place the DB in the repo so it is
     # version-control-adjacent and easy to locate.
     return (
-        Path(__file__).resolve().parent.parent
+        Path(__file__).resolve().parents[2]
         / "src"
         / "infrastructure"
         / "database"
