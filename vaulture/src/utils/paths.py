@@ -130,7 +130,7 @@ def migrations_path() -> Path:
         base: Path = Path(sys.executable).parent
     else:
         # utils/paths.py → utils → project_root
-        base: Path = Path(__file__).resolve().parent.parent
+        base: Path = Path(__file__).resolve().parents[2]
 
     return base / _REL_MIGRATIONS
 
@@ -170,7 +170,7 @@ def log_path() -> Path:  # noqa: D401
         base_dir: Path = Path(user_data_dir(_APP_NAME, _APP_AUTHOR))
     else:
         # utils/paths.py -> utils -> project_root / logs
-        base_dir: Path = Path(__file__).resolve().parent.parent / _LOG_DIR_NAME
+        base_dir: Path = Path(__file__).resolve().parents[2] / _LOG_DIR_NAME
 
     # Create the directory tree securely; `exist_ok=True` prevents races
     # on subsequent calls, and `0o700` keeps other local users out.
