@@ -20,12 +20,28 @@ Why this matters
 The test uses `pytest.MonkeyPatch` to evict the module from
 `sys.modules`, simulating a *fresh* interpreter import without having to
 spawn a subprocess.
+
+
+
+– redaction-filter regression test
+==================================================
+
+This test ensures the project-wide ``_RedactSecretsFilter``:
+
+1. Leaves **non-sensitive** keys untouched.
+2. Replaces **sensitive** keys (e.g. ``master_password``) with the
+   literal string ``"<redacted>"`` before the record reaches any handler.
+3. Emits exactly **one** log record at the DEBUG level.
+
+A failure here would imply that plaintext secrets might leak to disk or
+stdout, violating Vaulture’s privacy guarantees.
 """
 
 
 import sys, importlib, logging
 from logging.handlers import RotatingFileHandler
 from pytest import MonkeyPatch
+from _pytest.logging import LogCaptureFixture
 #: Single source of truth for the module under test.  Keeping it in one
 #: constant avoids typos between `importlib.import_module()` calls.
 PKG: str = "vaulture.src.utils.logging"
@@ -100,3 +116,59 @@ def test_single_initialisation(monkeypatch: MonkeyPatch) -> None:
     assert (
         _n_file_handlers() == 1
     ), "Duplicate RotatingFileHandlers detected – logging is not idempotent"
+
+def test_redaction_filter(monkeypatch: MonkeyPatch, caplog: LogCaptureFixture):   
+    """Verify that the redaction filter replaces sensitive values
+        with the literal string ``"<redacted>"`` **and** leaves non-sensitive
+        keys untouched.
+
+        Steps performed:
+            1. Reload the logging module so that each test starts
+            with a *clean* root logger (handled by ``_reload_logging``).
+            2. Re-attach pytest’s capture handler after the reload
+            to intercept records post-filtering.
+            3. Emit a DEBUG record containing both sensitive
+            (``master_password``) and ordinary (``service``) data.
+            4. Assert:
+                • the secret value never appears in plain text,
+                • the record count is exactly one,
+                • the sensitive key is now ``"<redacted>"``,
+                • the non-sensitive key remains unchanged.
+        """
+
+    # Reload the logging configuration so the root logger is pristine.
+    log_mod = _reload_logging(monkeypatch)
+
+    # Obtain a namespaced logger; the first call triggers config.
+    log = log_mod.get_logger("test.redact")
+
+    # pytest’s caplog fixture was detached by _reload_logging → add it back.
+    root = logging.getLogger()
+    root.addHandler(caplog.handler)
+    caplog.set_level(logging.DEBUG)          # capture everything
+
+    # ------------------------------------------------------------------ #
+    # Emit a structured DEBUG record that should be filtered.            #
+    # ------------------------------------------------------------------ #
+    log.debug(
+        "saving %(service)s credentials",
+        {
+            "service": "github.com",
+            "master_password": "hunter2",
+            "username": "dod",
+        },
+    )
+
+    # ------------------------------------------------------------------ #
+    # Assertions                                                         #
+    # ------------------------------------------------------------------ #
+    # The secret must not appear anywhere in the captured log text.
+    assert "hunter2" not in caplog.text
+    # Exactly one record should have been emitted.
+    assert len(caplog.records) == 1
+
+    record = caplog.records[0]
+    # Sensitive key was redacted.
+    assert record.args["master_password"] == "<redacted>"  # type: ignore[index]
+    # Non-sensitive key is untouched.
+    assert record.args["service"] == "github.com"           # type: ignore[index]
