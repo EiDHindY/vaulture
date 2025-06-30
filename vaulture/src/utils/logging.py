@@ -1,3 +1,4 @@
+# vaulture/vaulture/src/utils/logging.py
 """
 logging_config.py – centralised logging bootstrap for Vaulture
 ==============================================================
@@ -36,7 +37,7 @@ import sys
 from types import TracebackType
 from typing import Final
 
-from utils.paths import log_path
+from vaulture.src.utils.paths import log_path
 
 # --------------------------------------------------------------------------- #
 # Constants

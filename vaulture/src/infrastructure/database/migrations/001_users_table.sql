@@ -1,4 +1,4 @@
--- src/infrastructure/database/migrations
+-- # vaulture/vaulture/src/infrastructure/database/migrations/001_users_table.sql
 -- users TABLE
 CREATE TABLE IF NOT EXISTS users(
     user_id                BLOB CHECK (length(user_id) = 16) PRIMARY KEY,        -- 16-byte UUID binary

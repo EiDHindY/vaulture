@@ -1,3 +1,5 @@
+# vaulture/vaulture/src/utils/paths.py
+
 """
 paths.py – centralised helpers for locating Vaulture’s on-disk resources.
 
@@ -36,7 +38,7 @@ _APP_AUTHOR: Final[str] = "DoD"
 _DB_FILE_NAME:Final[str] = "vault.db"
 
 
-def db_path() -> Path:  # noqa: D401
+def db_path() -> Path:  
     """
     Return the absolute filesystem path to *vault.db*.
 
@@ -93,7 +95,7 @@ def db_path() -> Path:  # noqa: D401
 _REL_MIGRATIONS: Final[str] = "src/infrastructure/database/migrations"
 
 
-def migrations_path() -> Path:  # noqa: D401
+def migrations_path() -> Path:  
     """
     Return the absolute path of the *migrations* directory.
 

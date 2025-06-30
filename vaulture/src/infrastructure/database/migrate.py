@@ -1,3 +1,4 @@
+# vaulture/vaulture/src/infrastructure/database/migrate.py
 """
 migrate.py – lightweight, file-based migration runner for Vaulture.
 
