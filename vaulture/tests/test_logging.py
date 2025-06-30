@@ -37,14 +37,36 @@ A failure here would imply that plaintext secrets might leak to disk or
 stdout, violating Vaulture’s privacy guarantees.
 """
 
-
-import sys, importlib, logging, traceback
+import sys, importlib, logging
 from logging.handlers import RotatingFileHandler
 from pytest import MonkeyPatch
+import pytest
 from _pytest.logging import LogCaptureFixture
+from typing import Iterator                
+
 #: Single source of truth for the module under test.  Keeping it in one
 #: constant avoids typos between `importlib.import_module()` calls.
-PKG: str = "vaulture.src.utils.logging"
+PKG: str = "src.utils.logging"
+
+
+@pytest.fixture(autouse=True)
+def _no_file_writes() -> Iterator[None]:  # type: ignore
+    """
+    Ensure tests do not write to the actual vaulture.log file.
+
+    This autouse fixture runs around **every test**, and after each one:
+    - Removes any `RotatingFileHandler` instances from the root logger.
+    - Ensures log output is captured by in-memory tools like `caplog` only.
+
+    Prevents disk writes and avoids interfering with production log rotation.
+    """
+    yield
+    # Strip file handlers post-test to avoid polluting vaulture.log
+    root = logging.getLogger()
+    root.handlers[:] = [
+        h for h in root.handlers if not isinstance(h, RotatingFileHandler)
+    ]
+
 
 
 # --------------------------------------------------------------------------- #
@@ -186,8 +208,8 @@ def test_uncaught_exception_hook(monkeypatch: MonkeyPatch,
 
     # -------- fabricate an exception --------
     try:
-        1 / 0  # Raises ZeroDivisionError immediately
-    except ZeroDivisionError:
+        1 / 0  # type:ignore
+    except ZeroDivisionError: 
         exc_type, exc_val, exc_tb = sys.exc_info()  # Capture the full exception tuple
 
     # Manually invoke the global exception hook, simulating a crash

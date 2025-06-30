@@ -37,7 +37,7 @@ import sys
 from types import TracebackType
 from typing import Final
 
-from vaulture.src.utils.paths import log_path
+from src.utils.paths import log_path
 
 # --------------------------------------------------------------------------- #
 # Constants
