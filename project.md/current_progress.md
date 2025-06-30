@@ -13,3 +13,5 @@
     6- created the logging.py file in src/utils/logging.py
     7- created the logs/ that will carry the .log file
     8- created the test/ in the src/ and made the first test file which is test_logging.py
+    9- created the test files for (the logging.py and the paths.py and the migrate.py)
+    

@@ -18,6 +18,8 @@
 │     │     │          └─ paths.py
 │     │     ├─ 📁tests/
 │     │     │     ├─ test_logging.py
+│     │     │     ├─ test_paths.py
+│     │     │     ├─ test_migrate.py
 │     │     ├─ 📁logs/
 │     │     │     ├─ vaulture.log
 │     ├─ 📁venv/
