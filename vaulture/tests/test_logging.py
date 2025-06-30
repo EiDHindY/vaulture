@@ -38,7 +38,7 @@ stdout, violating Vaulture’s privacy guarantees.
 """
 
 
-import sys, importlib, logging
+import sys, importlib, logging, traceback
 from logging.handlers import RotatingFileHandler
 from pytest import MonkeyPatch
 from _pytest.logging import LogCaptureFixture
@@ -172,3 +172,44 @@ def test_redaction_filter(monkeypatch: MonkeyPatch, caplog: LogCaptureFixture):
     assert record.args["master_password"] == "<redacted>"  # type: ignore[index]
     # Non-sensitive key is untouched.
     assert record.args["service"] == "github.com"           # type: ignore[index]
+
+def test_uncaught_exception_hook(monkeypatch: MonkeyPatch,
+                                 caplog: LogCaptureFixture) -> None:
+    # Reload the logging config to install the sys.excepthook override.
+    log_mod = _reload_logging(monkeypatch)
+
+    # Re-attach pytest’s capture handler to the root logger,
+    # since _reload_logging clears all handlers.
+    root = logging.getLogger()
+    root.addHandler(caplog.handler)
+    caplog.set_level(logging.CRITICAL)
+
+    # -------- fabricate an exception --------
+    try:
+        1 / 0  # Raises ZeroDivisionError immediately
+    except ZeroDivisionError:
+        exc_type, exc_val, exc_tb = sys.exc_info()  # Capture the full exception tuple
+
+    # Manually invoke the global exception hook, simulating a crash
+    # without terminating the test process.
+    log_mod.sys.excepthook(exc_type, exc_val, exc_tb)  # type: ignore[attr-defined]
+
+    # ------------- assertions ---------------
+
+    # Ensure exactly one critical-level record was emitted
+    assert len(caplog.records) == 1, "Hook did not log"
+    rec = caplog.records[0]
+
+    # Confirm it was logged as CRITICAL
+    assert rec.levelno == logging.CRITICAL
+
+    # Message should begin with the hardcoded string in excepthook
+    assert rec.getMessage().startswith("UNCAUGHT EXCEPTION")
+
+    # exc_info should be attached so the handler/formatter can include the traceback
+    assert rec.exc_info is not None
+
+    # Sanity-check: traceback contains the test function or module-level line
+    import traceback
+    tb_list = traceback.extract_tb(rec.exc_info[2])
+    assert tb_list[-1].name == "<module>" or tb_list[-1].name == "test_uncaught_exception_hook"
